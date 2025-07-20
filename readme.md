@@ -1,371 +1,374 @@
+# Chatbot API - AdonisJS 5
+
+Sebuah REST API untuk sistem chatbot yang dibangun dengan AdonisJS 5, PostgreSQL, dan integrasi dengan external chatbot service Majadigi.
+
+## 📋 Fitur
+
+- ✅ Kirim pertanyaan ke chatbot
+- ✅ Manajemen percakapan (conversation)
+- ✅ Riwayat pesan
+- ✅ Autentikasi dengan Basic Auth & API Key
+- ✅ Paginasi untuk daftar percakapan
+- ✅ Database transaction untuk konsistensi data
+- ✅ Soft delete untuk conversation dan message
+
+## 🛠 Teknologi
+
+- **Framework**: AdonisJS 5
+- **Database**: PostgreSQL
+- **ORM**: Lucid ORM
+- **Authentication**: Basic Auth + API Key
+- **Validation**: AdonisJS Validator
+- **External API**: Axios untuk integrasi chatbot
+
+## 📁 Struktur Project
+
+```
+├── app/
+│   ├── Controllers/Http/
+│   │   ├── ConversationsController.ts    # Mengelola percakapan
+│   │   ├── MessagesController.ts          # Mengelola pesan
+│   │   └── QuestionsController.ts         # Endpoint utama untuk chatbot
+│   ├── Middleware/
+│   │   ├── Auth.ts                        # Basic authentication
+│   │   └── BasicAuth.ts                   # API Key authentication
+│   ├── Models/
+│   │   ├── Conversation.ts                # Model percakapan
+│   │   ├── Message.ts                     # Model pesan
+│   │   └── User.ts                        # Model user
+│   ├── Services/
+│   │   └── ChatbotService.ts              # Service untuk external chatbot API
+│   └── Validators/
+│       └── QuestionValidator.ts           # Validasi input pertanyaan
+├── database/
+│   └── migrations/                        # Database schema
+├── config/                                # Konfigurasi aplikasi
+└── start/
+    └── routes.ts                          # Definisi routes
+```
+
+## 📚 API Documentation
+
+### Base URL
+```
+http://localhost:3333/api
+```
+
+### Authentication
+API menggunakan dua jenis autentikasi:
+- **API Key**: Header `API_KEY` untuk endpoint public
+- **Basic Auth**: Username/password untuk endpoint admin
+
 ---
 
-# 📘 Chatbot API Documentation
+### 1. 💬 Kirim Pertanyaan ke Chatbot
 
-## 🔹 Deskripsi
+**Endpoint**: `POST /api/questions`
 
-Chatbot API adalah layanan RESTful yang dibangun menggunakan **AdonisJS v5** dan **PostgreSQL**. API ini menerima pesan dari pengguna, meneruskannya ke **API publik eksternal**, serta menyimpan percakapan ke dalam database.
+**Headers**:
+```
+API_KEY: your-secret-api-key
+Content-Type: application/json
+```
 
----
-
-## 🔸 Endpoints
-
-### 📨 POST `/api/questions`
-
-Mengirim pesan ke chatbot dan mendapatkan respons dari API eksternal.
-
-#### Request Body
-
+**Request Body**:
 ```json
 {
-  "message": "halo",
-  "session_id": "1309c142-3535-45b2-acdf-8bfbe59c3b9a"
+  "question": "Halo, apa kabar?",
+  "additional_context": "Context tambahan (opsional)",
+  "session_id": "unique-session-id (opsional)"
 }
-````
+```
 
-| Field       | Tipe   | Deskripsi                        | Optional |
-| ----------- | ------ | -------------------------------- | -------- |
-| message     | string | Pesan yang dikirim oleh pengguna | ❌        |
-| session\_id | UUID   | ID sesi untuk melacak percakapan | ✅        |
-
-#### Response (200 OK)
-
+**Response Success (200)**:
 ```json
 {
-  "status": 200,
-  "message": "success",
-  "session_id": "1309c142-3535-45b2-acdf-8bfbe59c3b9a",
-  "data": [
-    {
-      "text": "I'm here to assist you with inquiries related to the Public Information Disclosure website and the Online Aspirations and Complaints Service in East Java. However, it seems your message doesn't contain a specific question or topic related to these                       services. Could you please clarify your inquiry? 😊",
-      "properties": {
-      "source": {
-          "id": "OpenAIModel-b1JlZ",
-          "display_name": "OpenAI",
-          "source": "gpt-4o-mini"
-      },
-      "icon": "OpenAI",
-      "allow_markdown": false,
-      "state": "complete",
-      "text_color": "",
-      "background_color": ""
+  "success": true,
+  "data": {
+    "conversation_id": "123e4567-e89b-12d3-a456-426614174000",
+    "session_id": "abc123",
+    "user_message": "Halo, apa kabar?",
+    "bot_response": "Halo! Saya baik, terima kasih. Ada yang bisa saya bantu?",
+    "timestamp": "2025-07-20T10:30:00.000Z"
+  }
+}
+```
+
+**Response Error (400/500)**:
+```json
+{
+  "success": false,
+  "message": "Failed to process question",
+  "error": "Error details"
+}
+```
+
+---
+
+### 2. 📜 Daftar Percakapan
+
+**Endpoint**: `GET /api/conversations`
+
+**Authentication**: Basic Auth
+
+**Query Parameters**:
+- `page` (optional): Halaman (default: 1)
+- `limit` (optional): Jumlah data per halaman (default: 10)
+- `session_id` (optional): Filter berdasarkan session ID
+
+**Example**:
+```
+GET /api/conversations?page=1&limit=5&session_id=abc123
+```
+
+**Response (200)**:
+```json
+{
+  "success": true,
+  "data": {
+    "meta": {
+      "total": 25,
+      "per_page": 10,
+      "current_page": 1,
+      "last_page": 3,
+      "first_page": 1,
+      "first_page_url": "/?page=1",
+      "last_page_url": "/?page=3",
+      "next_page_url": "/?page=2",
+      "previous_page_url": null
     },
-      "category": "message",
-      "id": "803966c8-c95c-4a6a-99af-1e9ef2bcda01",
-      "flow_id": "52776abd-422d-40f0-a44a-dd074ecf6c40",
-      "suggest_links": []
-    }
-  ]
-}
-```
-
-### Error Response
-
-#### `400 Bad Request`
-
-Permintaan tidak valid, biasanya karena field wajib tidak dikirim.
-
-```json
-{
-  "status": 400,
-  "message": "Validation failure",
-  "errors": [
-    {
-      "rule": "required",
-      "field": "message",
-      "message": "required validation failed"
-    }
-  ]
-}
-```
-
-#### `404 Not Found`
-
-Data tidak ditemukan, misalnya ketika `session_id` tidak cocok dengan percakapan manapun.
-
-```json
-{
-  "status": 404,
-  "message": "Not found",
-  "error": "Conversation with your session_id is not found"
+    "data": [
+      {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "session_id": "abc123",
+        "created_at": "2025-07-20T10:00:00.000Z",
+        "updated_at": "2025-07-20T10:30:00.000Z",
+        "lastMessage": {
+          "id": "msg-123",
+          "message": "Terima kasih atas informasinya!",
+          "sender_type": "user",
+          "created_at": "2025-07-20T10:30:00.000Z"
+        }
+      }
+    ]
+  }
 }
 ```
 
 ---
 
-### 📄 GET `/api/conversation`
+### 3. 🔍 Detail Percakapan
 
-Mengambil daftar percakapan yang tersimpan beserta isi pesannya. Endpoint ini mendukung pagination.
+**Endpoint**: `GET /api/conversations/{id}`
 
-#### Query Parameters
+**Authentication**: Basic Auth
 
-| Field | Tipe   | Deskripsi                      | Optional |
-| ----- | ------ | ------------------------------ | -------- |
-| page  | number | Halaman yang ingin ditampilkan | ✅        |
-| limit | number | Jumlah data per halaman        | ✅        |
+**Parameters**:
+- `id`: Conversation ID atau Session ID
 
-#### Contoh Request
-
-```
-GET /api/conversation?page=1&limit=10
-```
-
-#### Response (200 OK)
-
+**Response (200)**:
 ```json
-
 {
-  "status": 200,
-  "message": "success",
-  "meta": {
-    "total": 20,
-    "perPage": 10,
-    "currentPage": 1,
-    "lastPage": 2,
-    "nextPageUrl": "/api/conversation?page=2&limit=10",
-    "prevPageUrl": null
-  },
-  "data": [
-    {
-      "id": 1,
-      "session_id": "1309c142-3535-45b2-acdf-8bfbe59c3b9a",
-      "last_messages": "halo",
-      "messages": [
-        {
-          "sender_type": "question",
-          "message": "halo"
-        },
-        {
-      "text": "I'm here to assist you with inquiries related to the Public Information Disclosure website and the Online Aspirations and Complaints Service in East Java. However, it seems your message doesn't contain a specific question or topic related to these                       services. Could you please clarify your inquiry? 😊",
-      "properties": {
-      "source": {
-          "id": "OpenAIModel-b1JlZ",
-          "display_name": "OpenAI",
-          "source": "gpt-4o-mini"
+  "success": true,
+  "data": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "session_id": "abc123",
+    "created_at": "2025-07-20T10:00:00.000Z",
+    "updated_at": "2025-07-20T10:30:00.000Z",
+    "messages": [
+      {
+        "id": "msg-1",
+        "sender_type": "user",
+        "message": "Halo, apa kabar?",
+        "created_at": "2025-07-20T10:00:00.000Z"
       },
-      "icon": "OpenAI",
-      "allow_markdown": false,
-      "state": "complete",
-      "text_color": "",
-      "background_color": ""
-    },
-      "category": "message",
-      "id": "803966c8-c95c-4a6a-99af-1e9ef2bcda01",
-      "flow_id": "52776abd-422d-40f0-a44a-dd074ecf6c40",
-      "suggest_links": []
-    }
-      ]
-    }
-  ]
+      {
+        "id": "msg-2",
+        "sender_type": "bot",
+        "message": "Halo! Saya baik, terima kasih.",
+        "created_at": "2025-07-20T10:00:30.000Z"
+      }
+    ]
+  }
 }
 ```
 
 ---
 
-## 📦 Metadata Pagination
+### 4. 🗑️ Hapus Percakapan
 
-| Field       | Tipe   | Deskripsi                                    |
-| ----------- | ------ | -------------------------------------------- |
-| total       | number | Total seluruh data yang tersedia             |
-| perPage     | number | Jumlah data per halaman                      |
-| currentPage | number | Halaman yang sedang diakses                  |
-| lastPage    | number | Halaman terakhir berdasarkan total dan limit |
-| nextPageUrl | string | URL ke halaman berikutnya (jika ada)         |
-| prevPageUrl | string | URL ke halaman sebelumnya (jika ada)         |
+**Endpoint**: `DELETE /api/conversations/{id}`
+
+**Authentication**: Basic Auth
+
+**Response (200)**:
+```json
+{
+  "success": true,
+  "message": "Conversation deleted successfully"
+}
+```
 
 ---
 
-### 📨 GET `/api/conversation/:id`
+### 5. 🗑️ Hapus Pesan
 
-Mengambil detail percakapan berdasarkan `id`, termasuk seluruh pesan di dalamnya.
+**Endpoint**: `DELETE /api/messages/{id}`
 
-#### URL Parameter
+**Authentication**: Basic Auth
 
-| Field | Tipe   | Deskripsi                 | Optional |
-|-------|--------|----------------------------|----------|
-| id    | number | ID percakapan yang dicari  | ❌       |
-
-#### Contoh Request
-
-```
-GET /api/conversation/1
-```
-#### Response (200 OK)
+**Response (200)**:
 ```json
 {
-    "status": 200,
-    "message": "success",
-    "data": {
-        "id": 1,
-        "session_id": "1309c142-3535-45b2-acdf-8bfbe59c3b9a",
-        "lastMessages": {
-            "text": "I'm here to assist you with inquiries related to the Public Information Disclosure website and the Online Aspirations and Complaints Service in East Java. However, it seems your message doesn't contain a specific question or topic related to these services. Could you please clarify your inquiry? 😊",
-            "properties": {
-                "source": {
-                    "id": "OpenAIModel-b1JlZ",
-                    "display_name": "OpenAI",
-                    "source": "gpt-4o-mini"
-                },
-                "icon": "OpenAI",
-                "allow_markdown": false,
-                "state": "complete",
-                "text_color": "",
-                "background_color": ""
-            },
-            "category": "message",
-            "id": "803966c8-c95c-4a6a-99af-1e9ef2bcda01",
-            "flow_id": "52776abd-422d-40f0-a44a-dd074ecf6c40",
-            "suggest_links": []
-        },
-        "messages": [
-            {
-                "id": 16,
-                "sender_type": "answer",
-                "message": {
-                    "text": "I'm here to assist you with inquiries related to the Public Information Disclosure website and the Online Aspirations and Complaints Service in East Java. However, it seems your message doesn't contain a specific question or topic related to these services. Could you please clarify your inquiry? 😊",
-                    "properties": {
-                        "source": {
-                            "id": "OpenAIModel-b1JlZ",
-                            "display_name": "OpenAI",
-                            "source": "gpt-4o-mini"
-                        },
-                        "icon": "OpenAI",
-                        "allow_markdown": false,
-                        "state": "complete",
-                        "text_color": "",
-                        "background_color": ""
-                    },
-                    "category": "message",
-                    "id": "803966c8-c95c-4a6a-99af-1e9ef2bcda01",
-                    "flow_id": "52776abd-422d-40f0-a44a-dd074ecf6c40",
-                    "suggest_links": []
-                },
-                "createdAt": "2025-07-14T05:13:36.351+00:00",
-                "updatedAt": "2025-07-14T05:13:36.352+00:00",
-                "conversationId": 5
-            }
-        ]
-    }
+  "success": true,
+  "message": "Message deleted successfully"
 }
 ```
 
-### Error Response
+## 🎯 Alur Kerja Aplikasi
 
-#### `404 Bad Request`
+### 1. **Proses Chat Normal**
+```
+User → POST /questions → Validasi → Cari/Buat Conversation → 
+Simpan User Message → Call External Chatbot API → 
+Simpan Bot Response → Update Last Message → Return Response
+```
 
-Data tidak ditemukan, misalnya ketika conversation dengan id tersebut tidak ditemukan.
+### 2. **Session Management**
+- Jika `session_id` tidak diberikan, sistem generate UUID baru
+- Jika `session_id` sudah ada, pesan ditambahkan ke conversation yang sama
+- Setiap conversation memiliki `lastMessage` untuk tracking pesan terakhir
+
+### 3. **Database Transaction**
+- Semua operasi database dalam `QuestionsController.store()` menggunakan transaction
+- Jika ada error, semua perubahan di-rollback
+- Memastikan konsistensi data
+
+## 🔧 Konfigurasi External Chatbot
+
+External chatbot service dikonfigurasi di `ChatbotService.ts`:
+
+```typescript
+private static baseUrl = 'https://api.majadigidev.jatimprov.go.id/api/external/chatbot'
+
+public static async sendMessage(question: string, additionalContext: string, sessionId: string)
+```
+
+**Request ke External API**:
 ```json
 {
-    "status": 404,
-    "message": "not found",
-    "error": "data not found"
-}
-```
----
-
-### 📨 DELETE `/api/conversation/:id`
-Menghapus conversation berdasarkan `id`, pada suatu conversation.
-#### Contoh Request
-
-```
-DELETE /api/conversation/1
-```
-#### Response (200 OK)
-```json
-{
-    "status": 200,
-    "message": "success",
-    "data": {
-        "id": 1,
-        "session_id": "1309c142-3535-45b2-acdf-8bfbe59c3b9a",
-        "last_messages": {
-            "text": "I'm here to assist you with inquiries related to the Public Information Disclosure website and the Online Aspirations and Complaints Service in East Java. However, it seems your message doesn't contain a specific question or topic related to these services. Could you please clarify your inquiry? 😊",
-            "properties": {
-                "source": {
-                    "id": "OpenAIModel-b1JlZ",
-                    "display_name": "OpenAI",
-                    "source": "gpt-4o-mini"
-                },
-                "icon": "OpenAI",
-                "allow_markdown": false,
-                "state": "complete",
-                "text_color": "",
-                "background_color": ""
-            },
-            "category": "message",
-            "id": "803966c8-c95c-4a6a-99af-1e9ef2bcda01",
-            "flow_id": "52776abd-422d-40f0-a44a-dd074ecf6c40",
-            "suggest_links": []
-        },
-        "createdAt": "2025-07-14T05:13:36.312+00:00",
-        "updatedAt": "2025-07-14T05:13:36.333+00:00"
-    }
+  "question": "User question",
+  "additional_context": "Additional context",
+  "session_id": "session-id"
 }
 ```
 
-### Error Response
-#### `404 Bad Request`
-Data tidak ditemukan, misalnya ketika message dengan id tersebut tidak ditemukan.
-```json
-{
-    "status": 404,
-    "message": "not found",
-    "error": "data not found"
-}
-```
----
+## 🛡️ Security
 
-### 📨 DELETE `/api/conversation/message/:id`
-Menghapus message berdasarkan `id`, pada suatu conversation.
+### API Key Authentication
+- Semua request ke `/questions` harus menyertakan header `API_KEY`
+- API Key diset di environment variable `API_KEY`
 
-#### Contoh Request
+### Basic Authentication
+- Endpoint admin menggunakan Basic Auth
+- User harus terdaftar di database `users` table
+- Password di-hash menggunakan Argon2/Bcrypt
 
-```
-DELETE /api/conversation/message/1
-```
+## 📊 Database Schema
 
-#### Response (200 OK)
-```json
-{
-    "status": 200,
-    "message": "success",
-    "data": {
-        "id": 16,
-        "sender_type": "answer",
-        "message": {
-            "text": "I'm here to assist you with inquiries related to the Public Information Disclosure website and the Online Aspirations and Complaints Service in East Java. However, it seems your message doesn't contain a specific question or topic related to these services. Could you please clarify your inquiry? 😊",
-            "properties": {
-                "source": {
-                    "id": "OpenAIModel-b1JlZ",
-                    "display_name": "OpenAI",
-                    "source": "gpt-4o-mini"
-                },
-                "icon": "OpenAI",
-                "allow_markdown": false,
-                "state": "complete",
-                "text_color": "",
-                "background_color": ""
-            },
-            "category": "message",
-            "id": "803966c8-c95c-4a6a-99af-1e9ef2bcda01",
-            "flow_id": "52776abd-422d-40f0-a44a-dd074ecf6c40",
-            "suggest_links": []
-        },
-        "created_at": "2025-07-14T05:13:36.351+00:00",
-        "updated_at": "2025-07-14T05:13:36.352+00:00",
-        "conversation_id": 5
-    }
-}
+### Conversations Table
+```sql
+- id (UUID, Primary Key)
+- session_id (String, Indexed)
+- last_message_id (UUID, Foreign Key ke messages)
+- created_at (Timestamp)
+- updated_at (Timestamp)
 ```
 
-### Error Response
-
-#### `404 Bad Request`
-Data tidak ditemukan, misalnya ketika message dengan id tersebut tidak ditemukan.
-```json
-{
-    "status": 404,
-    "message": "not found",
-    "error": "data not found"
-}
+### Messages Table
+```sql
+- id (UUID, Primary Key)
+- conversation_id (UUID, Foreign Key ke conversations)
+- sender_type (Enum: 'user'|'bot')
+- message (Text)
+- created_at (Timestamp)
+- updated_at (Timestamp)
 ```
+
+### Users Table
+```sql
+- id (Integer, Primary Key)
+- email (String, Unique)
+- username (String, Unique)
+- password (String, Hashed)
+- created_at (Timestamp)
+- updated_at (Timestamp)
+```
+
+## 🧪 Testing
+
+### Manual Testing dengan cURL
+
+**1. Test Kirim Pertanyaan**:
+```bash
+curl -X POST http://localhost:3333/api/questions \
+  -H "API_KEY: your-secret-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Halo, apa kabar?",
+    "session_id": "test-session-123"
+  }'
+```
+
+**2. Test Get Conversations**:
+```bash
+curl -X GET http://localhost:3333/api/conversations \
+  -u "username:password"
+```
+
+**3. Test Get Conversation Detail**:
+```bash
+curl -X GET http://localhost:3333/api/conversations/test-session-123 \
+  -u "username:password"
+```
+
+## 🚀 Deployment
+
+### Environment Production
+```env
+NODE_ENV=production
+HOST=0.0.0.0
+PORT=3333
+
+# Database production
+DB_HOST=your-production-db-host
+DB_USER=your-production-db-user
+DB_PASSWORD=your-production-db-password
+DB_DATABASE=chatbot_production
+
+# Security
+API_KEY=your-very-secure-api-key
+APP_KEY=your-very-secure-app-key
+```
+
+### Build & Start
+```bash
+npm run build
+npm start
+```
+
+## 📝 Logging
+
+Aplikasi menggunakan AdonisJS Logger:
+- **Development**: Pretty print logs ke console
+- **Production**: Structured JSON logs
+- Error handling dengan try-catch dan proper logging
+
+## 🤝 Contributing
+
+1. Fork repository
+2. Buat feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push ke branch (`git push origin feature/amazing-feature`)
+5. Buat Pull Request
+
